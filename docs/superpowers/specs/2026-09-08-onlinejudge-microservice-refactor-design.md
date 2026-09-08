@@ -267,3 +267,5 @@ Feign 接口（service-client）：`UserServiceClient`、`QuestionServiceClient`
 2. **每请求回查最新 user（保留即时封禁语义）**：单体 JwtInterceptor 每请求回 DB 取最新 role/userName 以即时生效封禁/改角色。微服务化后在**网关层**保留该语义：网关校验 token + Redis 活跃会话后，经 load-balanced WebClient 调 user-service 内网端点取最新用户快照（id/userRole/userName/账号状态），再注入 `X-User-Id/X-User-Role/X-User-Name` 等身份头；服务只信身份头、不再每请求查库。代价：每个已登录请求多一次 gateway→user-service 内网 RTT（可后续加短 TTL 缓存优化）。
 3. **服务侧收敛**：服务（含 user-service 自身受保护端点）统一用 common 的"身份头过滤器 + @AuthCheck(按身份头角色)"；user-service 主要负责签发令牌/会话簿记（Redis/redisson）与对内网暴露用户快照/脱敏查询。
 4. 其余锁定决策不变；修订后首个子计划为 **auth-backbone（网关统一鉴权 + 身份头公共组件 + user-service 最小登录签发/内网快照）**。
+
+> 修订追记（2026-09-09 B2 落地后）：§4.1/§4.2 旧文"网关依赖 common"已失效——网关现只依赖 `onlinejudge-model`（model.result/model.auth）与自身 WebFlux/redis-reactive 栈；不依赖 common（其含 servlet starter）。B1 落 user-service 真实登录/会话/内网快照，B2 落网关统一鉴权（验签+Redis 会话+每请求快照+剥/注入 X-User-*+ban 硬拒+续签），鉴权主干闭环。

@@ -242,3 +242,16 @@ git commit -m "fix(gateway): <修复摘要>"
 - **行为对齐**：白名单、错误码、会话键、续签头均沿用单体/既有约定；快照每请求拉取=用户"每请求回查最新 user/即时封禁"决策在网关落地；ban 硬拒比单体更严（设计 §修订）。
 - **安全**：入站 X-User-* 先剥后注入；/inner 无路由；服务直连仍可伪造头——属已知信任边界，E2E 验收 6 覆盖网关层防护。
 - **待实现时校正**：`@LoadBalanced WebClient.Builder` bean 是否在 gateway 下被 Spring Cloud LoadBalancer 处理（否则改用 `LoadBalancedExchangeFilterFunction`）；续签写入响应头时序；ErrorCode 数值以 `model.result.ErrorCode` 为准。这些以编译+E2E 实证校正并在报告中记录。
+
+---
+
+## Epilogue — B2 结果 & 服务迁移前置（2026-09-09）
+
+B2 完成：网关统一鉴权闭环，E2E 全项 PASS（放行/登录/受保护经网关仅 token→身份头注入/伪造 admin 头被剥/40100//inner 网关 404 vs 直连 200/ban 40101/过期续签轮换且旧 refresh 一次性）。E2E 暴露并修复：BaseResponse 缺无参构造（bd117e5）、过滤器 switchIfEmpty 双触发 rejectInactive（5c00bda）。全量 `mvn -DskipTests install` EXIT=0。
+
+服务迁移（question/submit/judge）现在可直接在网关上叠加：
+1. 服务侧一律不加 servlet token 解析；用 common `IdentityHeaderFilter`+`AuthRoleAspect`，主类 `scanBasePackages` 含 `annotation/security/exception/config` 与 `@MapperScan` 自有 mapper 包；`context-path=/api`；数据源/MyBatis/Redis(如需要) 各自 config 放本服务包内（参照 user-service B1）。
+2. `/api/inner/**` 网关无路由=外网不可达；Feign(service-client) 直连 `/api/inner/**` 不带用户头（正确，勿给 Feign 加"复制当前用户头"拦截器）。inner 不做用户鉴权。
+3. 网关 question/submit 路由现仍指向冒烟服务；question 冒烟 Feign 曾指向 user `/api/inner/ping` 已失效——在各自迁移完成前不要运行 question/submit 冒烟。
+4. BaseResponse 已有 `@NoArgsConstructor`（Jackson/Feign 解码兼容）。
+5. 遗留 minor 待统一：refresh 并发双续签竞态(CAS)、白名单可收紧 register/login 仅 POST、/get/vo 匿名可查 VO、get/vo 缺 id 50000、HeaderConstant/UserContext 键统一等。
