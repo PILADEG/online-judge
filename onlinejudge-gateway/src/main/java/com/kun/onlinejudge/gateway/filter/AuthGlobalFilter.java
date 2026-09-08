@@ -138,14 +138,21 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             }
             String sessionKey = sessionKey(userId, deviceType);
             // 4. 校验活跃会话：session:{userId}:{deviceType} 的值 == tokenId 才有效。
+            //    注意：continueAuthorized/rejectInactive 均返回 Mono<Void>，驱动响应（或写出错误体）后即
+            //    "空完成"。若在此用 switchIfEmpty 兜底"无会话"，会把"分支已处理"误判为"无会话"而二次
+            //    执行 rejectInactive——响应已提交时报 UnsupportedOperationException。故用 defaultIfEmpty("")
+            //    显式表达"无活跃会话"，统一在 flatMap 内判定。
             return redisTemplate.opsForValue().get(sessionKey)
+                    .defaultIfEmpty("")
                     .flatMap(activeTokenId -> {
+                        if (activeTokenId.isEmpty()) {
+                            return rejectInactive(exchange, userId, deviceType, tokenId);
+                        }
                         if (tokenId.equals(activeTokenId)) {
                             return continueAuthorized(exchange, chain, userId, deviceType);
                         }
                         return rejectInactive(exchange, userId, deviceType, tokenId);
                     })
-                    .switchIfEmpty(Mono.defer(() -> rejectInactive(exchange, userId, deviceType, tokenId)))
                     .onErrorResume(e -> onUnexpected(exchange, e, "校验会话状态失败"));
         } catch (ExpiredJwtException ex) {
             // access 过期 → 尝试用 X-Refresh-Token 续签并轮换会话。
@@ -286,17 +293,19 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         // 先校验 refresh 合法且会话仍活跃（oldTokenId==active）；通过也【暂不轮换】——
         // 轮换推迟到快照成功且非 ban 之后（refreshAndAuthorize），见 I2：user-service 故障/ban 时
         // 不烧旧 refresh，避免新 token 未写回而用户永久登出。
+        // 与 filter() 同理：refreshAndAuthorize/rejectInactive 返回 Mono<Void>（空完成），改用
+        // defaultIfEmpty("") 显式表达"无会话"，避免 switchIfEmpty 对"分支已处理"二次写出。
         return redisTemplate.opsForValue().get(sessionKey)
+                .defaultIfEmpty("")
                 .flatMap(activeTokenId -> {
-                    // refresh 对应的 tokenId 不再是活跃会话（已被轮换/踢下线）→ 交由 kicked 判定。
-                    if (!oldTokenId.equals(activeTokenId)) {
+                    // 无活跃会话记录，或 refresh 对应的 tokenId 不再是活跃会话（已被轮换/踢下线）→ 交由 kicked 判定。
+                    if (activeTokenId.isEmpty() || !oldTokenId.equals(activeTokenId)) {
                         return rejectInactive(exchange, userId, deviceType, oldTokenId);
                     }
                     // 会话活跃：先取快照 → 快照成功且非 ban 后再轮换并放行。
                     return refreshAndAuthorize(exchange, chain, userId, deviceType, sessionKey,
                             refreshClaims, expired);
                 })
-                .switchIfEmpty(Mono.defer(() -> rejectInactive(exchange, userId, deviceType, oldTokenId)))
                 .onErrorResume(e -> onUnexpected(exchange, e, "续签失败"));
     }
 
