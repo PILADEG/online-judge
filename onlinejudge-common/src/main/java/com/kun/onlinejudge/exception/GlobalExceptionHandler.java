@@ -1,8 +1,8 @@
 package com.kun.onlinejudge.exception;
 
-import com.kun.onlinejudge.common.BaseResponse;
-import com.kun.onlinejudge.common.ErrorCode;
-import com.kun.onlinejudge.common.ResultUtils;
+import com.kun.onlinejudge.model.result.BaseResponse;
+import com.kun.onlinejudge.model.result.ErrorCode;
+import com.kun.onlinejudge.model.result.ResultUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

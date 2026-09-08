@@ -1,26 +1,27 @@
-package com.kun.onlinejudge.utils;
-import io.jsonwebtoken.Claims;
+package com.kun.onlinejudge.model.auth;
+
 import com.kun.onlinejudge.model.dto.user.RefreshTokenResult;
 import com.kun.onlinejudge.model.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import javax.crypto.SecretKey;
 
-@Component
+/**
+ * JWT 纯工具（跨运行时共享：servlet 服务与 WebFlux 网关均可用）。
+ * 无 spring 注解；由各运行时用 yml jwt.* 显式构造为 Bean。
+ */
 public class JwtUtils {
+
     private final SecretKey secretKey;
     private final long accessTokenExpire;
     private final long refreshTokenExpire;
 
-    public JwtUtils(@Value("${jwt.secret}") String secret,
-                   @Value("${jwt.access-token-expire}") long accessTokenExpire,
-                   @Value("${jwt.refresh-token-expire}") long refreshTokenExpire) {
+    public JwtUtils(String secret, long accessTokenExpire, long refreshTokenExpire) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpire = accessTokenExpire;
         this.refreshTokenExpire = refreshTokenExpire;

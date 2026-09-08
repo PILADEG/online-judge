@@ -1,6 +1,6 @@
 package com.kun.onlinejudge.exception;
 
-import com.kun.onlinejudge.common.ErrorCode;
+import com.kun.onlinejudge.model.result.ErrorCode;
 
 /**
  * 自定义异常类

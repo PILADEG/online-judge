@@ -1,6 +1,6 @@
 package com.kun.onlinejudge.serviceclient;
 
-import com.kun.onlinejudge.common.BaseResponse;
+import com.kun.onlinejudge.model.result.BaseResponse;
 import com.kun.onlinejudge.model.vo.UserVO;
 import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;

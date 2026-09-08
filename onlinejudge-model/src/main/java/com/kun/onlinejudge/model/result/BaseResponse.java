@@ -1,4 +1,4 @@
-package com.kun.onlinejudge.common;
+package com.kun.onlinejudge.model.result;
 
 import java.io.Serializable;
 import lombok.Data;

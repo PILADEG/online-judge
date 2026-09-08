@@ -1,4 +1,4 @@
-package com.kun.onlinejudge.common;
+package com.kun.onlinejudge.model.result;
 
 /**
  * 自定义错误码

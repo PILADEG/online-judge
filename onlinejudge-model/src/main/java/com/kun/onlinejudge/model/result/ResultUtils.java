@@ -1,4 +1,4 @@
-package com.kun.onlinejudge.common;
+package com.kun.onlinejudge.model.result;
 
 /**
  * 返回工具类
