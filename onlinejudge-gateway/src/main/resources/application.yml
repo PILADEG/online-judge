@@ -3,6 +3,11 @@ server:
 spring:
   application:
     name: onlinejudge-gateway
+  redis:
+    database: 2
+    host: localhost
+    port: 6379
+    timeout: 5000
   cloud:
     nacos:
       discovery:
@@ -24,3 +29,7 @@ spring:
           uri: lb://onlinejudge-submit-service
           predicates:
             - Path=/api/submit/**
+jwt:
+  secret: onlinejudge-jwt-secret-key-2026-256bits
+  access-token-expire: 900
+  refresh-token-expire: 604800
