@@ -258,3 +258,12 @@ Feign 接口（service-client）：`UserServiceClient`、`QuestionServiceClient`
 
 ## 附：锁定决策回放（供评审核对）
 1. Java8 + SB2.6.13 + SCA 2021.0.5.0；2. 先单库后分库；3. 核心闭环优先、wx/cos 去除、file 停用保留；4. 网关统一鉴权；5. 方案 A 四业务服务拆分；6. 本轮交付=方案+设计定稿。
+
+## 修订（2026-09-09）：鉴权主干先行 + 每请求最新 user
+
+用户于 Foundation 完成后进一步拍板，**调整实施顺序与鉴权语义**：
+
+1. **鉴权主干先行**：把"网关统一鉴权 + 公共身份头（X-User-*）+ 服务侧身份头信任过滤器"从 §9 步骤 7 提前为下一步骤；各业务服务迁移全部落在已就绪的鉴权主干之上，避免每服务重复做本地 JWT 拦截（弃用"过渡期各服务自校验"方案）。
+2. **每请求回查最新 user（保留即时封禁语义）**：单体 JwtInterceptor 每请求回 DB 取最新 role/userName 以即时生效封禁/改角色。微服务化后在**网关层**保留该语义：网关校验 token + Redis 活跃会话后，经 load-balanced WebClient 调 user-service 内网端点取最新用户快照（id/userRole/userName/账号状态），再注入 `X-User-Id/X-User-Role/X-User-Name` 等身份头；服务只信身份头、不再每请求查库。代价：每个已登录请求多一次 gateway→user-service 内网 RTT（可后续加短 TTL 缓存优化）。
+3. **服务侧收敛**：服务（含 user-service 自身受保护端点）统一用 common 的"身份头过滤器 + @AuthCheck(按身份头角色)"；user-service 主要负责签发令牌/会话簿记（Redis/redisson）与对内网暴露用户快照/脱敏查询。
+4. 其余锁定决策不变；修订后首个子计划为 **auth-backbone（网关统一鉴权 + 身份头公共组件 + user-service 最小登录签发/内网快照）**。
