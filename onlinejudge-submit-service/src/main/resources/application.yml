@@ -1,0 +1,16 @@
+server:
+  port: 8103
+  servlet:
+    context-path: /api
+spring:
+  application:
+    name: onlinejudge-submit-service
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848

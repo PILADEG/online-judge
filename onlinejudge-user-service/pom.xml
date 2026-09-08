@@ -39,12 +39,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <!-- Task 2 scaffold: no @SpringBootApplication main class yet, so skip repackage to keep
-                     `mvn -DskipTests install` green. Remove this <configuration> once the real main class
-                     is added (Task 6). -->
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
                 <executions>
                     <execution>
                         <goals>
