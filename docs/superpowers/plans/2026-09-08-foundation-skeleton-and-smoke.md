@@ -1225,3 +1225,16 @@ git commit -m "feat(foundation): add minimal runnable apps proving nacos/gateway
 - **路由一致性**：统一 `context-path=/api` + 网关不剥前缀 + Feign URL 显式 `/api/...`，与设计 §③ 及 service-client 的 `/api/inner/**` 契约一致（Task 6 Step 1 已同步）。
 - **占位扫描**：无 TBD/TODO；冒烟中的 `SmokeUserPingClient`/`RabbitSmokeConfig` 为显式声明的临时占位并注明后续删除，属计划内。
 - **类型一致性**：Feign 契约方法与后续 `/api/inner/**` 路径、服务名、`BaseResponse<VO>` 类型在 Task 5 与 Global Constraints 一致。
+
+---
+
+## Epilogue — Forward constraints for next sub-plans (from final review 2026-09-09)
+
+Foundation 终审（可合并，无 Critical/must-fix）给出 4 条须由后续服务迁移子计划继承的协调约束：
+
+1. **BaseResponse/ErrorCode 归属前置拍板**：网关(WebFlux)不能依赖 common（common 依赖 starter-web/servlet）。网关统一鉴权子计划必须先把 `common.BaseResponse`/`ErrorCode` 这两个无 servlet 依赖的纯类**下沉到 model**（网关可依赖 model 而无冲突），或在网关内小复刻，以产出同构错误体（设计 §6.2.4）。在 gateway 子计划开工前决定。
+2. **Rabbit 常量收进 common**：`code-exchange`/`code-queue`/`code.routing.key`（现 submit/judge 各复刻一份 + SmokeListener 再硬编码队列名）须在真实迁移时收为 common 的 `RabbitConstant`，producer/consumer/listener 同源引用。
+3. **Feign 启用与冒烟占位清理**：`@EnableFeignClients` 需覆盖 `com.kun.onlinejudge.serviceclient`（或 `clients={...}`）；submit-service 迁移时需新增 `@EnableFeignClients`。冒烟占位件（`SmokeUserPingClient`、各 `PingController`、`SmokeSendController`、两处 `RabbitSmokeConfig`）的**删除**是每个服务迁移任务的显式第一步——谨防 `RabbitSmokeConfig` 的 bean 名（`codeExchange`/`codeQueue`）与真实 Rabbit 声明重名导致启动冲突。
+4. **common 禁整包扫描**：四服务根包与 common 是兄弟包，须用受限 `@Import`/窄扫描引入 `GlobalExceptionHandler`/`CorsConfig`/`JsonConfig` 等；禁止 `@ComponentScan("com.kun.onlinejudge")`（会把 `JwtUtils`(需 `jwt.secret`) 与兄弟服务控制器串扫进来）。
+
+其它 carry-over：冒烟占位路径 `/ping`、`/inner/ping`、`/submit/smoke/send` 与单体真实映射（`/user`、`/question`、`/question_submit`）无冲突，迁移时整体删除即可。
