@@ -511,3 +511,20 @@ git commit -m "feat(auth): add identity-header filter + @AuthCheck role aspect (
 - **一致性**：`model.result`/`model.auth` 无 servlet 依赖（BaseResponse/ErrorCode/ResultUtils 纯数据；JwtUtils 去掉 spring 注解）；common 新增 `security`/`annotation` 依赖 model 与 common 既有件，无循环。
 - **行为对齐**：AuthRoleAspect 复刻单体 AuthInterceptor 判定顺序（未登录→mustRole 空放行→ban 拒绝→admin/user 分级）；@AuthCheck 用法与单体注解一致。
 - **残留追踪**：`common` pom 的 jjwt/redisson 依赖在 Segment A 暂不清理（避免无谓 churn），待 Segment B/C 归属明确后统一收口（记入台账 minor）。
+
+---
+
+## Epilogue — Forward constraints for Segment B (final review 2026-09-09)
+
+Segment A 终审通过、无 must-fix。以下供 **Segment B（user-service 登录签发 + inner 快照 + 网关响应式鉴权 + E2E）**开工即用：
+
+1. **网关只依赖 model**（不依赖 common，避免 servlet 栈污染 WebFlux）；把 spec §4.1/§4.2 依赖表改对（现仍写网关依赖 common）。网关用 `model.result.*` + `model.auth.JwtUtils` 组错误体/验签。
+2. **网关=单体 JwtInterceptor 白名单替代者**：白名单逐条对齐；错误体 HTTP200+code(40100/40102) 保 FE 契约；续签写 `X-Access-Token/X-Refresh-Token` 响应头。需决策响应式 Redis 客户端（Reactive RedissonClient 或 spring-data-redis-reactive）。
+3. **剥伪造头 + 测试**：网关先剥入站 `X-User-*` 再注入 + 过滤器级测试；`/api/inner/**` 不路由并加守卫。服务端口直连即可伪造头须在验收明示（当前信任模型固有边界）。
+4. **每请求最新用户快照 = 新内网契约**：现有 `UserServiceClient`（{id}/vo、list/vo）不足以支撑快照；新增 `GET /inner/user/{id}/snapshot`（id/userRole/userName/账号状态，DTO 落 model）；决策 ban 由**网关硬拒**（比单体更严，承接裸 @AuthCheck 不承担 ban 的 I1）。
+5. **avatar/unionId/mpOpenId 决策**：核对单体读 `getLoginUser().avatar/unionId/mpOpenId` 的受保护端点；需要就扩展快照+`X-User-Avatar` 头或改走 DB/Feign，勿静默丢字段（当前 4 头不填它们）。
+6. **JwtUtils 装配方式变更**：model 版无 @Component/@Value，user-service 与网关各自按 yml `jwt.*` 显式 @Bean；确认是否保留 `scriptRedissonClient` 命名与 `deviceType==null` 旧 refresh 兼容路径。
+7. **服务迁移纪律**：逐个核对 @AuthCheck 的 mustRole 字符串（防 fail-open）；裸 @AuthCheck 不承担 ban；Feign 内网调用禁止复制当前用户头（防伪造）；consumer 端将 inner 非 0 code 还原 BusinessException。
+8. **judge-service 无 HTTP**：common 带 starter-web，落 judge 时须 `web-application-type=none`/排除 servlet。
+
+已裁决（A 段不修）：common pom 残留 jjwt 死依赖建议 B kickoff 移除（redisson 待 user-service 落位再定）；测试可选补 BAN/mustRole=user 覆盖例；HeaderConstant.ATTR_* 与 UserContext 键重复、IdentityHeaderFilter 无 warn 日志、UserContext avatar 等键恒空，均留 B/C。
