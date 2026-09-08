@@ -436,3 +436,16 @@ git commit -m "feat(user): wire user-service app, add /inner/user snapshot+vo, U
 - **鉴权语义**：本段 user-service 在"网关未上线"前提下用身份头模拟网关；token 解析放网关（B2）。`/get/login` 直连需身份头是预期。内网端点无鉴权、不对外路由（B2 约束）。
 - **数据一致**：数据源=单体 dev(onlinejudge/root/123456789, db2)；SALT/逻辑删除/camelCase 关 均与单体一致。
 - **残留追踪**：common config 扫描面（CorsConfig/JsonConfig）在 B2 网关上线后复核；Admin 端点在网关上线前仅靠身份头模拟测试。
+
+---
+
+## Epilogue — B1 实测要点 & B2 前置（2026-09-09）
+
+B1 收口：全量 `mvn -DskipTests install` EXIT=0、工作树 clean；四项任务逐审查通过（含运行时验收 PASS）。
+
+B2（网关响应式鉴权）开工前已确认/需注意：
+1. **内网快照契约已就位**：`GET /api/inner/user/{id}/snapshot`（UserSnapshotVO: id/userRole/userName/userAvatar；用户不存在 40400）。网关每请求据此注入身份头。新注册用户 userRole 依赖 DB 默认（实测为 user，OK）。
+2. **user-service 登录态端点需身份头**：网关前 user-service 不解析 token；`GET /api/user/get/login`、admin 端点、`/user/logout` 都读 `X-User-*`。B2 网关负责：验 token+Redis 会话 → 拉 snapshot → 注入 `X-User-Id/Role/Name(+Avatar)`。
+3. **40100/40101 语义已实测**：服务侧 @AuthCheck（common）按身份头角色判；网关未过/角色不符时由服务抛码即可（B2 网关侧可预先拒 ban/40100，服务作为第二道）。
+4. **Redis 会话键**：`session:<userId>:<deviceType>` 存 tokenId（7d）、`kicked:...`；值由 Redisson StringCodec 写入（纯字符串），网关用 spring-data-redis-reactive 的 StringRedisTemplate 可直接读。
+5. **回归面**：删除 user `/inner/ping` 后，question 冒烟 Feign（SmokeUserPingClient → /api/inner/ping）仅在运行 question 时会暴露；question/submit/judge 冒烟占位保留到各自迁移（FC3）。`GET /inner/user/{id}/vo` 对不存在 id 会 50000（可后修）。B1 新发现的 minor：无 X-User-Avatar 头、新账号 userName/userAvatar 空、/get/vo 匿名可查 VO——均记录待统一。
