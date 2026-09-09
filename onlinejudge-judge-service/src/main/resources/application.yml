@@ -1,12 +1,35 @@
 spring:
+  main:
+    web-application-type: none
   application:
     name: onlinejudge-judge-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/onlinejudge
+    username: root
+    password: 123456789
   rabbitmq:
     host: 127.0.0.1
     port: 5672
     username: guest
     password: guest
+    listener:
+      simple:
+        acknowledge-mode: manual
   cloud:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+codesandbox:
+  type: example
+  url: http://127.0.0.1:8201/docker/
+  auth-secret: online_judge_project_secret_key
