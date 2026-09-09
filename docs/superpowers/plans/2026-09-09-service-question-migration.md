@@ -270,3 +270,14 @@ git commit -m "feat(question): add /inner/question VO endpoint; verify question-
 - **鉴权一致性**：service 不解析 token；admin 由 `X-User-Role` 经 `AuthRoleAspect` 判定；创建人 id 取 `X-User-Id`。与 B1/B2 已闭环的网关语义一致。
 - **跨服务**：question VO user 填充唯一跨服务依赖，走 `UserServiceClient.listUserVOByIds`（批量，非 1+N）；QuestionVO 公开不含 answer/judgeCases（脱敏在内网端点同样成立）。
 - **清理**：SB 冒烟占位（PingController/SmokeUserPingClient）删除，网关 question 路由现指向真实 question-service。
+
+---
+
+## Epilogue — question-service 迁移完成（2026-09-09）
+
+3 任务全绿（Q-0 配置/清冒烟、Q-1 迁移+Feign 拼 user+主类、Q-2 内网端点+E2E）。E2E 实测：admin 建题、公开 get/vo 无 answer、分页 VO `user.id` 由 Feign→user-service 填充、inner 端点、越权三级(40101/40100/0)、经网关真实 token 读题均 PASS。
+
+给 submit/judge 迁移的要点：
+- submit 校验"题目存在/取标题"用现成 `QuestionServiceClient.getQuestionVOById(id)`（Feign 直连 question-service `/api/inner/question/{id}`）。
+- 模式参照：service 主类 scanBasePackages=自身+annotation/security/exception/config + @MapperScan(自身 mapper) + (Feign 消费方) @EnableFeignClients(serviceclient)；本地 config 各自持有（MP 分页等）；context-path=/api；VO 跨服务填充走 UserServiceClient/QuestionServiceClient 批量；不加 servlet token 过滤、不加"复制当前用户头"Feign 拦截器。
+- ⚠ 备注：`@EnableFeignClients(basePackages=serviceclient)` 会把同模块"自我" client 也注册（question-service 里 QuestionServiceClient 未被注入即无碍）；单条 Feign 对传输级异常会 500（未做 FallbackFactory，留作可选项）。
