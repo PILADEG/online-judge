@@ -234,3 +234,12 @@ git commit -m "fix(submit): <摘要>"   # 无修复则跳过
 - 复用 question-service 已验证模式；submit 特有点为：判题经 MQ（常量收 common）、owner/admin 用 UserContext、validQuestionSubmit 校验题目走 Feign QuestionServiceClient。
 - 判题消费端属 judge-service（下一步迁移），本段验收只验证"DB WAITING + MQ 消息发出"，不验证判题结果。
 - Rabbit 拓扑在 submit 与(后续)judge 双侧声明（幂等），常量同源防漂移。
+
+---
+
+## Epilogue — submit-service 迁移完成（2026-09-09）
+
+3 任务全绿（S-0 常量/配置/清冒烟、S-1 提交域迁移+MQ Producer+Feign、S-2 E2E）。E2E 实测：提交→DB WAITING→Rabbit code-queue 发出、owner/他人 VO 隐藏逻辑、my/list user.id Feign、list/page admin、题目不存在 40400、经网关 token 全 PASS。**E2E 暴露并修复**：网关 submit 路由 predicate `/api/submit/**`→`/api/question_submit/**`（59deb87，真实服务对外即 /api/question_submit/**）。
+
+遗留（待整体联测/judge 迁移处理）：验收产生的测试用户/题目/1 条 WAITING 提交仍在库、code-queue 滞留 1 条消息（judge-service 起后会被消费）。
+给 judge-service 迁移要点：消费端用 `RabbitConstant.QUEUE` 监听 code-queue，反序列化 QuestionSubmit JSON，同库直连 question/question_submit（乐观锁抢占 RUNNING→判题→回写），全程 manual ack；网关不路由 judge（无 HTTP）。判题域(codesandbox/judgement/JudgeUtils)与 RabbitMqConsumer 迁移至 judge-service。
