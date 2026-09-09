@@ -5,6 +5,11 @@ server:
 spring:
   application:
     name: onlinejudge-submit-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/onlinejudge
+    username: root
+    password: 123456789
   rabbitmq:
     host: 127.0.0.1
     port: 5672
@@ -14,3 +19,12 @@ spring:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-delete-value: 1
+      logic-not-delete-value: 0
