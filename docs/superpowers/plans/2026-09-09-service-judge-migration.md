@@ -184,3 +184,11 @@ git commit -m "fix(judge): <摘要>"
 - judge-service 是最后一个业务服务：判题域代码（codesandbox/judgement/template/JudgeUtils）整体迁入并归位 import；MQ 消费端接 RabbitConstant；同库直连两张表不变；无 HTTP/无网关。
 - 闭环验收 = 提交→判题→回写 status/judgeInfo + submitNum 递增，即整个核心 OJ 判题链路的端到端验证。
 - 遗留：submit E2E 产生的 1 条滞留 code-queue 消息会被本服务消费判题（正好验证积压消费）。
+
+---
+
+## Epilogue — judge-service 迁移完成（2026-09-09）
+
+4 业务服务迁移全部完成（user/question/submit/judge）。判题闭环 E2E 实测 PASS：提交→MQ→judge 消费→本地 dev example 沙箱判题→DB 回写 status/judgeInfo + submitNum/acceptedNum；错码/编译错→status 3。
+关键：**E2E 发现单体 ExampleCodeSandBox（example 型）返回 null → doJudge NPE → 提交卡 RUNNING**；修复 b22c000 将 dev example 沙箱改为临时目录本地 javac/java 执行并返回 ExecuteResponse（仅 dev 路径，Docker 生产路径与判题/回写逻辑未动）。**生产部署必须 `codesandbox.type=docker`**（example 无隔离，dev-only）。
+遗留 minor（可 backlog）：dev example 沙箱 stdin 无超时/缓冲无上限/编码 GBK 等；doJudge finalResponse==null 分支无显式 return（单体遗留）。
