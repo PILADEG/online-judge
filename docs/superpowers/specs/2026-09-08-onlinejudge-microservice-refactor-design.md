@@ -269,3 +269,5 @@ Feign 接口（service-client）：`UserServiceClient`、`QuestionServiceClient`
 4. 其余锁定决策不变；修订后首个子计划为 **auth-backbone（网关统一鉴权 + 身份头公共组件 + user-service 最小登录签发/内网快照）**。
 
 > 修订追记（2026-09-09 B2 落地后）：§4.1/§4.2 旧文"网关依赖 common"已失效——网关现只依赖 `onlinejudge-model`（model.result/model.auth）与自身 WebFlux/redis-reactive 栈；不依赖 common（其含 servlet starter）。B1 落 user-service 真实登录/会话/内网快照，B2 落网关统一鉴权（验签+Redis 会话+每请求快照+剥/注入 X-User-*+ban 硬拒+续签），鉴权主干闭环。
+
+> 完成记录（2026-09-09）：核心闭环四服务 + 网关统一鉴权**全部迁移完成并通过整体端到端联测**——经网关真实 token 走通 注册→登录→admin 建题→题目 VO 脱敏→提交→MQ→judge(本地 example 沙箱)判题→DB 回写 status/judgeInfo/submitNum/acceptedNum；错码判 FAILED。服务：user/question/submit/judge 各司其职、网关为唯一入口（验签+Redis 会话+每请求快照+剥/注入 X-User-*+ban 硬拒）。生产部署注意事项：judge 需以 **JDK**（非 JRE）启动（dev 本地 javac 沙箱），且 **`codesandbox.type=docker`** 才具隔离（example 为 dev-only）。
