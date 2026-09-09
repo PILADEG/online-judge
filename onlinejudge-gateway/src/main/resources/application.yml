@@ -28,7 +28,7 @@ spring:
         - id: submit-route
           uri: lb://onlinejudge-submit-service
           predicates:
-            - Path=/api/submit/**
+            - Path=/api/question_submit/**
 jwt:
   secret: onlinejudge-jwt-secret-key-2026-256bits
   access-token-expire: 900
