@@ -23,7 +23,7 @@ public class QuestionSubmitQueryRequest extends PageRequest implements Serializa
     private String language;
 
     /**
-     * 状态（0-待判题 1-判题中 2-成功 3-失败）
+     * 状态（0-待判题 1-判题中 2-成功 3-失败 4-系统故障重试耗尽待人工处理）
      */
     private Integer status;
 

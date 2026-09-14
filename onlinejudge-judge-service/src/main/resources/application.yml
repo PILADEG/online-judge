@@ -30,6 +30,27 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 codesandbox:
-  type: example
-  url: http://127.0.0.1:8201/docker/
+  type: docker
+  # 远程沙箱服务地址
+  url: http://192.168.38.129:8201/docker/
+  # 远程沙箱鉴权密钥（需替换为真实值）
   auth-secret: online_judge_project_secret_key
+judge:
+  retry:
+    # 最大重试次数（重投次数上限；总判题尝试次数 = 1 + max-retry）
+    max-retry: 3
+    # 兜底扫描间隔
+    scan-interval-ms: 30000
+    # WAITING 超过该时长仍未判完 → 视为需要重投
+    stuck-threshold-ms: 30000
+    # RUNNING 超过该时长仍未结束 → 视为卡死，复位为 WAITING 后重投
+    running-timeout-ms: 180000
+    # 每轮最多处理的提交数
+    batch-size: 20
+  dlq:
+    # 死信队列积压告警阈值（达到即打 ERROR 日志）
+    alert-threshold: 1
+    # 死信入库观察窗口（分钟内有过入库就告警）
+    recent-window-minutes: 10
+    # 告警检查间隔
+    alert-interval-ms: 60000

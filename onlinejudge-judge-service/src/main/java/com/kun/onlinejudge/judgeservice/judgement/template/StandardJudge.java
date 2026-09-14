@@ -11,6 +11,7 @@ import com.kun.onlinejudge.model.judge.JudgeCase;
 import com.kun.onlinejudge.model.judge.JudgeConfig;
 import com.kun.onlinejudge.model.judge.JudgeContext;
 import com.kun.onlinejudge.model.judge.JudgeInfo;
+import com.kun.onlinejudge.judgeservice.judgement.RetryableJudgeException;
 import com.kun.onlinejudge.judgeservice.utils.JudgeUtils;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
@@ -29,12 +30,10 @@ public abstract class StandardJudge implements JudgeTemplate{
         try{
             if (judgeContext.getStatus() != null
                     && judgeContext.getStatus().equals(JudgeInfoMessageEnum.SYSTEM_ERROR.getValue())){
-                judgeUtils.setSystemErrorJudge(judgeContext.getQuestion(), judgeContext.getQuestionSubmit());
-                log.info("system error:{}", judgeContext.getErrorMessage());
-                return ExecuteResponse.builder()
-                        .status(JudgeInfoMessageEnum.SYSTEM_ERROR.getValue())
-                        .errorMessage("系统错误")
-                        .build();
+                // 沙箱系统故障属"可重试故障"（如远程沙箱不可用）：此处不落终态，
+                // 抛给消费端把提交复位为 WAITING 并记录原因，由定时任务重投。
+                log.warn("sandbox system error, will retry: {}", judgeContext.getErrorMessage());
+                throw new RetryableJudgeException("沙箱系统故障：" + judgeContext.getErrorMessage());
             }
             Question question = judgeContext.getQuestion();
             QuestionSubmit questionSubmit = judgeContext.getQuestionSubmit();
@@ -102,9 +101,11 @@ public abstract class StandardJudge implements JudgeTemplate{
                         .build();
             }
             return null;
+        } catch (RetryableJudgeException e) {
+            throw e;
         } catch (Exception e) {
             log.error("commonJudge error", e);
-            throw new RuntimeException(e);
+            throw new RetryableJudgeException("判题模板执行异常：" + e.getMessage(), e);
         }
     }
     protected ExecuteResponse judgeAnswer(JudgeContext judgeContext){

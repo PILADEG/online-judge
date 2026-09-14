@@ -38,9 +38,14 @@ public class QuestionSubmit implements Serializable {
     private String judgeInfo;
 
     /**
-     * 状态（0-待判题 1-判题中 2-成功 3-失败）
+     * 状态（0-待判题 1-判题中 2-成功 3-失败 4-系统故障重试耗尽待人工处理）
      */
     private Integer status;
+
+    /**
+     * 判题系统故障的重试次数（每次重投前 +1；达到上限后提交置为状态 4）
+     */
+    private Integer retryCount;
 
     /**
      * 题目 id

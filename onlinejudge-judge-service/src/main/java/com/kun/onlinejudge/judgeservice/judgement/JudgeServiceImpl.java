@@ -6,8 +6,6 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.kun.onlinejudge.judgeservice.codesandbox.CodeSandBox;
 import com.kun.onlinejudge.judgeservice.codesandbox.CodeSandBoxFactory;
 import com.kun.onlinejudge.judgeservice.codesandbox.CodeSandBoxProxy;
-import com.kun.onlinejudge.model.result.ErrorCode;
-import com.kun.onlinejudge.exception.ThrowUtils;
 import com.kun.onlinejudge.judgeservice.judgement.factory.JudgeStrategyFactory;
 import com.kun.onlinejudge.judgeservice.judgement.strategy.JudgeStrategy;
 import com.kun.onlinejudge.judgeservice.mapper.QuestionMapper;
@@ -54,7 +52,12 @@ public class JudgeServiceImpl implements JudgeService {
             return;
         }
         Question question = questionMapper.selectById(questionSubmit.getQuestionId());
-        ThrowUtils.throwIf(question==null, ErrorCode.NOT_FOUND_ERROR, "题目不存在");
+        if (question == null) {
+            // 题目不存在属不可重试的系统故障（重试也不会出现）→ 直接置终态待人工
+            judgeUtils.setAbortJudge(null, questionSubmit,
+                    "题目不存在, questionId=" + questionSubmit.getQuestionId());
+            return;
+        }
         ExecuteMessage executeMessage = ExecuteMessage.builder()
                 .judgeCases(JSONUtil.toList(question.getJudgeCases(), JudgeCase.class))
                 .code(questionSubmit.getCode())
@@ -76,22 +79,32 @@ public class JudgeServiceImpl implements JudgeService {
                 .build();
         JudgeStrategy judgeStrategy = judgeStrategyFactory.getJudgeStrategy(questionSubmit.getLanguage());
         if (judgeStrategy == null){
-            judgeUtils.setSystemErrorJudge(question, questionSubmit);
+            // 判题语言不支持属不可重试故障（重试也不会支持）→ 直接置终态待人工
+            judgeUtils.setAbortJudge(question, questionSubmit,
+                    "不支持的判题语言: " + questionSubmit.getLanguage());
             return;
         }
         ExecuteResponse finalResponse=null;
         try{
              finalResponse = judgeStrategy.judge(judgeContext);
              log.info("judge result:{}", finalResponse);
+        } catch (RetryableJudgeException e) {
+            // 可重试系统故障（沙箱不可用等）：保持异常类型，交给消费端复位 + 定时重投
+            throw e;
         } catch (Exception e) {
             log.error("judge error", e);
-            judgeUtils.setSystemErrorJudge(question, questionSubmit);
-            throw new RuntimeException(e);
+            throw new RetryableJudgeException("判题执行异常：" + e.getMessage(), e);
         }
         if (finalResponse == null){
-            log.info("参数错误");
-            judgeUtils.setSystemErrorJudge(question, questionSubmit);
+            // 模板未给出结果（题目参数/数据异常）属不可重试故障 → 直接置终态待人工
+            judgeUtils.setAbortJudge(question, questionSubmit,
+                    "判题无返回结果（题目参数或数据异常）");
         }
 
+    }
+
+    @Override
+    public void markRetryableFailure(QuestionSubmit questionSubmit, String reason) {
+        judgeUtils.markRetryableFailure(questionSubmit, reason);
     }
 }

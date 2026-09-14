@@ -65,6 +65,7 @@ public class QuestionSubmitController {
         }
         questionSubmit.setUserId(loginUserId);
         questionSubmit.setStatus(QuestionSubmitStatusEnum.WAITING.getValue());
+        questionSubmit.setRetryCount(0);
         boolean result = questionSubmitService.save(questionSubmit);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         long newQuestionSubmitId = questionSubmit.getId();
