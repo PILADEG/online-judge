@@ -31,17 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * 示例代码沙箱（dev/联调用，无需远程 Docker 沙箱）。
- *
- * <p>原实现直接返回 null，导致 JudgeServiceImpl 在组装 JudgeContext 时 NPE、
- * 提交永远停在 RUNNING 且无结果回写（Task J-2 判题闭环验收暴露）。
- * 本沙箱在本地临时目录内用 JDK 编译并逐个用例运行提交的 Java 代码，
- * 捕获 stdout / 退出码 / 编译诊断，产出一个可被 StandardJudge 消费的 ExecuteResponse：
- * 成功运行（status 为空）→ 交给模板逐字比对 outputCase；
- * 编译/运行/超时 → 返回对应 status，由模板统一回写 FAILED。
- * 仅用于 dev，生产走 DockerCodeSandBox。
- */
 @Slf4j
 @Component
 public class ExampleCodeSandBox implements CodeSandBox {
@@ -67,9 +56,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
         }
     }
 
-    /**
-     * 本地编译并逐用例运行 Java，返回可判定的 ExecuteResponse。
-     */
     private ExecuteResponse doJava(ExecuteMessage message) throws IOException {
         String code = message.getCode();
         List<JudgeCase> judgeCases = message.getJudgeCases();
@@ -89,7 +75,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
             Path sourceFile = workDir.resolve(className + ".java");
             Files.write(sourceFile, code.getBytes(StandardCharsets.UTF_8));
 
-            // 1. 编译
             DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
             try (StandardJavaFileManager fileManager =
                          compiler.getStandardFileManager(diagnostics, null, StandardCharsets.UTF_8)) {
@@ -109,7 +94,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
                 }
             }
 
-            // 2. 逐用例运行
             long timeoutMs = resolveTimeout(message.getJudgeConfig());
             List<String> outputList = new ArrayList<>();
             long totalTime = 0L;
@@ -145,9 +129,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
         }
     }
 
-    /**
-     * 编译通过后用本地 JDK 的 java 运行一次（class 已在 workDir 内）。
-     */
     private RunResult runOnce(File workDir, String className, String input, long timeoutMs) {
         Process process = null;
         long start = System.nanoTime();
@@ -166,7 +147,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
             outThread.start();
             errThread.start();
 
-            // 写入该用例的 stdin 后关闭，子进程读 stdin 即获得输入并可 EOF 结束
             try (OutputStream stdin = process.getOutputStream()) {
                 if (input != null && !input.isEmpty()) {
                     stdin.write(input.getBytes(StandardCharsets.UTF_8));
@@ -204,7 +184,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
                 buf.write(buffer, 0, len);
             }
         } catch (IOException ignored) {
-            // 子进程被强杀等场景，忽略读流中断
         }
     }
 
@@ -235,7 +214,6 @@ public class ExampleCodeSandBox implements CodeSandBox {
         if (judgeConfig != null && judgeConfig.getTimeLimit() != null && judgeConfig.getTimeLimit() > 0) {
             timeout = judgeConfig.getTimeLimit();
         }
-        // 示例沙箱兜底，避免子进程卡死整个消费线程
         return Math.min(timeout, 20000L);
     }
 
@@ -273,11 +251,9 @@ public class ExampleCodeSandBox implements CodeSandBox {
                 try {
                     Files.deleteIfExists(path);
                 } catch (IOException ignored) {
-                    // 忽略清理失败（临时目录）
                 }
             });
         } catch (IOException ignored) {
-            // 忽略清理失败（临时目录）
         }
     }
 

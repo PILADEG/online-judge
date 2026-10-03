@@ -9,9 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-/**
- * 用户服务内部契约（消费方视角；由 user-service 的 /api/inner/user/** 提供）
- */
 @FeignClient(name = "onlinejudge-user-service", contextId = "userServiceClient")
 public interface UserServiceClient {
 

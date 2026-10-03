@@ -10,11 +10,6 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/**
- * 统一 JSON 错误/结果体写出工具（WebFlux）。
- * 网关侧不依赖 onlinejudge-common（servlet 栈），自行持有 ObjectMapper。
- * content-type: application/json;charset=UTF-8，HTTP 状态保持 200（由调用方通过 BaseResponse.code 表达语义）。
- */
 public final class AuthResultJson {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -24,13 +19,6 @@ public final class AuthResultJson {
     private AuthResultJson() {
     }
 
-    /**
-     * 将统一响应体写为响应字节并完成。
-     *
-     * @param exchange 当前请求交换
-     * @param body     统一响应体（BaseResponse，调用方用 ResultUtils.error(...) 构造）
-     * @return 完成信号
-     */
     public static Mono<Void> write(ServerWebExchange exchange, BaseResponse<?> body) {
         ServerHttpResponse response = exchange.getResponse();
         response.getHeaders().setContentType(new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8));

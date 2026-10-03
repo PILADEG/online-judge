@@ -12,9 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.DigestUtils;
 
-/**
- * 远程 Docker 代码沙箱（通过 HTTP 调用虚拟机上的沙箱服务）
- */
 @Slf4j
 @Component
 public class DockerCodeSandBox implements CodeSandBox {

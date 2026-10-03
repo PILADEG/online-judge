@@ -48,7 +48,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
-        // 1. 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
@@ -58,14 +57,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userPassword.length() < 4 || checkPassword.length() < 4) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
         }
-        // 密码和校验密码相同
         if (!userPassword.equals(checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
         RLock lock = redissonClient.getLock(RedisConstant.getRegisterLockKey(userAccount));
         Boolean isLocked = false;
         try {
-            // 账户不能重复
             isLocked = lock.tryLock(3, 10, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "账号正在注册中，请稍等");
@@ -76,9 +73,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             if (count > 0) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
             }
-            // 2. 加密
             String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
-            // 3. 插入数据
             User user = new User();
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
@@ -105,7 +100,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public UserLoginResponse userLogin(String userAccount, String userPassword, String userAgent) {
-        // 1. 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
@@ -115,14 +109,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userPassword.length() < 8) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
         }
-        // 2. 加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
-        // 查询用户是否存在
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
         queryWrapper.eq("userPassword", encryptPassword);
         User user = this.baseMapper.selectOne(queryWrapper);
-        // 用户不存在
         if (user == null) {
             log.info("user login failed, userAccount cannot match userPassword");
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
@@ -131,12 +122,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return buildLoginResponse(user, deviceType);
     }
 
-    /**
-     * 获取当前登录用户
-     * 身份来自 identity-header（IdentityHeaderFilter 已把 X-User-* 写入请求属性）
-     *
-     * @return
-     */
     @Override
     public User getLoginUser() {
         Long userId = UserContext.getUserId();
@@ -150,12 +135,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return currentUser;
     }
 
-    /**
-     * 获取当前登录用户（允许未登录）
-     * 身份来自 identity-header（IdentityHeaderFilter 已把 X-User-* 写入请求属性）
-     *
-     * @return
-     */
     @Override
     public User getLoginUserPermitNull() {
         Long userId = UserContext.getUserId();
@@ -165,11 +144,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return this.getById(userId);
     }
 
-    /**
-     * 当前请求用户是否为管理员（身份头上下文角色）
-     *
-     * @return
-     */
     @Override
     public boolean isAdmin() {
         String userRole = UserContext.getUserRole();
@@ -181,11 +155,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return user != null && UserRoleEnum.ADMIN.getValue().equals(user.getUserRole());
     }
 
-    /**
-     * 用户注销（基于当前身份头会话：删除该设备的 Redis 会话，使 access/refresh token 立即失效）
-     *
-     * @return
-     */
     @Override
     public boolean userLogout() {
         Long userId = UserContext.getUserId();
@@ -210,8 +179,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             String deviceType = jwtUtils.getDeviceType(claims);
             String sessionKey = RedisConstant.getSessionKey(userId, deviceType);
             String activeTokenId = (String) redissonClient.getBucket(sessionKey).get();
-            // 仅当此 refresh token 是当前活跃会话时才删除 session key
-            // 已被踢下线的 token 调用 logout 则不做任何操作
             if (tokenId != null && tokenId.equals(activeTokenId)) {
                 redissonClient.getBucket(sessionKey).delete();
             }
@@ -276,7 +243,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private UserLoginResponse buildLoginResponse(User user, String deviceType) {
         String sessionTokenId = UUID.randomUUID().toString();
 
-        // 检测同设备类型是否存在旧会话，若有则标记为 kicked（不可逆）
         String sessionKey = RedisConstant.getSessionKey(user.getId(), deviceType);
         String oldTokenId = (String) redissonClient.getBucket(sessionKey).get();
         if (oldTokenId != null) {
@@ -287,10 +253,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             }
         }
 
-        // 设置新会话
         redissonClient.getBucket(sessionKey).set(sessionTokenId, 7, TimeUnit.DAYS);
 
-        // 生成令牌
         String accessToken = jwtUtils.generateAccessToken(user, sessionTokenId, deviceType);
         RefreshTokenResult refreshResult = jwtUtils.generateRefreshToken(user, deviceType, sessionTokenId);
 

@@ -11,10 +11,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
 
-/**
- * JWT 纯工具（跨运行时共享：servlet 服务与 WebFlux 网关均可用）。
- * 无 spring 注解；由各运行时用 yml jwt.* 显式构造为 Bean。
- */
 public class JwtUtils {
 
     private final SecretKey secretKey;

@@ -10,73 +10,31 @@ import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 
-/**
- * 题目视图（不含 answer、judgeCases 等敏感字段）
- */
 @Data
 public class QuestionVO implements Serializable {
 
-    /**
-     * id
-     */
     private Long id;
 
-    /**
-     * 标题
-     */
     private String title;
 
-    /**
-     * 内容
-     */
     private String content;
 
-    /**
-     * 提交数
-     */
     private Integer submitNum;
 
-    /**
-     * 通过数
-     */
     private Integer acceptedNum;
 
-    /**
-     * 判题配置
-     */
     private JudgeConfig judgeConfig;
 
-    /**
-     * 创建用户 id
-     */
     private Long userId;
 
-    /**
-     * 创建时间
-     */
     private Date createTime;
 
-    /**
-     * 更新时间
-     */
     private Date updateTime;
 
-    /**
-     * 标签列表
-     */
     private List<String> tagList;
 
-    /**
-     * 创建人信息
-     */
     private UserVO user;
 
-    /**
-     * 包装类转对象
-     *
-     * @param questionVO
-     * @return
-     */
     public static Question voToObj(QuestionVO questionVO) {
         if (questionVO == null) {
             return null;
@@ -94,12 +52,6 @@ public class QuestionVO implements Serializable {
         return question;
     }
 
-    /**
-     * 对象转包装类
-     *
-     * @param question
-     * @return
-     */
     public static QuestionVO objToVo(Question question) {
         if (question == null) {
             return null;

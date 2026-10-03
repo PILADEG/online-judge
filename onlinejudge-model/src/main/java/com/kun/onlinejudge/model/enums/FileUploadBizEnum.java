@@ -5,12 +5,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ObjectUtils;
 
-/**
- * 文件上传业务类型枚举
- *
- * 
- * 
- */
 public enum FileUploadBizEnum {
 
     USER_AVATAR("用户头像", "user_avatar");
@@ -24,21 +18,10 @@ public enum FileUploadBizEnum {
         this.value = value;
     }
 
-    /**
-     * 获取值列表
-     *
-     * @return
-     */
     public static List<String> getValues() {
         return Arrays.stream(values()).map(item -> item.value).collect(Collectors.toList());
     }
 
-    /**
-     * 根据 value 获取枚举
-     *
-     * @param value
-     * @return
-     */
     public static FileUploadBizEnum getEnumByValue(String value) {
         if (ObjectUtils.isEmpty(value)) {
             return null;

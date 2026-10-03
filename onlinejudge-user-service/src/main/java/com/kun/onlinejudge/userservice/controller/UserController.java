@@ -45,12 +45,6 @@ public class UserController {
     @Resource
     private UserService userService;
 
-    /**
-     * 用户注册
-     *
-     * @param userRegisterRequest
-     * @return
-     */
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
@@ -66,13 +60,6 @@ public class UserController {
         return ResultUtils.success(result);
     }
 
-    /**
-     * 用户登录
-     *
-     * @param userLoginRequest
-     * @param userAgent        客户端 UA（用于设备类型识别）
-     * @return
-     */
     @PostMapping("/login")
     public BaseResponse<UserLoginResponse> userLogin(@RequestBody UserLoginRequest userLoginRequest,
                                                      @RequestHeader(value = "User-Agent", required = false) String userAgent) {
@@ -87,22 +74,12 @@ public class UserController {
         return ResultUtils.success(userService.userLogin(userAccount, userPassword, userAgent));
     }
 
-    /**
-     * 用户注销（基于当前身份头会话）
-     *
-     * @return
-     */
     @PostMapping("/logout")
     public BaseResponse<Boolean> userLogout() {
         boolean result = userService.userLogout();
         return ResultUtils.success(result);
     }
 
-    /**
-     * 获取当前登录用户（身份来自身份头上下文）
-     *
-     * @return
-     */
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getLoginUser() {
         LoginUserVO loginUserVO = UserContext.getLoginUser();
@@ -112,12 +89,6 @@ public class UserController {
         return ResultUtils.success(loginUserVO);
     }
 
-    /**
-     * 创建用户
-     *
-     * @param userAddRequest
-     * @return
-     */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
@@ -126,7 +97,6 @@ public class UserController {
         }
         User user = new User();
         BeanUtils.copyProperties(userAddRequest, user);
-        // 默认密码 12345678
         String defaultPassword = "12345678";
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + defaultPassword).getBytes());
         user.setUserPassword(encryptPassword);
@@ -135,12 +105,6 @@ public class UserController {
         return ResultUtils.success(user.getId());
     }
 
-    /**
-     * 删除用户
-     *
-     * @param deleteRequest
-     * @return
-     */
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
@@ -151,12 +115,6 @@ public class UserController {
         return ResultUtils.success(b);
     }
 
-    /**
-     * 更新用户
-     *
-     * @param userUpdateRequest
-     * @return
-     */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
@@ -170,12 +128,6 @@ public class UserController {
         return ResultUtils.success(true);
     }
 
-    /**
-     * 根据 id 获取用户（仅管理员）
-     *
-     * @param id
-     * @return
-     */
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<User> getUserById(long id) {
@@ -187,12 +139,6 @@ public class UserController {
         return ResultUtils.success(user);
     }
 
-    /**
-     * 根据 id 获取包装类
-     *
-     * @param id
-     * @return
-     */
     @GetMapping("/get/vo")
     public BaseResponse<UserVO> getUserVOById(long id) {
         BaseResponse<User> response = getUserById(id);
@@ -200,12 +146,6 @@ public class UserController {
         return ResultUtils.success(userService.getUserVO(user));
     }
 
-    /**
-     * 分页获取用户列表（仅管理员）
-     *
-     * @param userQueryRequest
-     * @return
-     */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<User>> listUserByPage(@RequestBody UserQueryRequest userQueryRequest) {
@@ -216,12 +156,6 @@ public class UserController {
         return ResultUtils.success(userPage);
     }
 
-    /**
-     * 分页获取用户封装列表
-     *
-     * @param userQueryRequest
-     * @return
-     */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
         if (userQueryRequest == null) {
@@ -229,7 +163,6 @@ public class UserController {
         }
         long current = userQueryRequest.getCurrent();
         long size = userQueryRequest.getPageSize();
-        // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<User> userPage = userService.page(new Page<>(current, size),
                 userService.getQueryWrapper(userQueryRequest));
@@ -239,12 +172,6 @@ public class UserController {
         return ResultUtils.success(userVOPage);
     }
 
-    /**
-     * 更新个人信息（当前登录用户）
-     *
-     * @param userUpdateMyRequest
-     * @return
-     */
     @PostMapping("/update/my")
     public BaseResponse<Boolean> updateMyUser(@RequestBody UserUpdateMyRequest userUpdateMyRequest) {
         if (userUpdateMyRequest == null) {

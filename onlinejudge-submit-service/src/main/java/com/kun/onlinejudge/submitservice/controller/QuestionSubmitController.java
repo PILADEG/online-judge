@@ -29,9 +29,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 题目提交接口
- */
 @RestController
 @RequestMapping("/question_submit")
 @Slf4j
@@ -42,14 +39,7 @@ public class QuestionSubmitController {
 
     @Resource
     private RabbitMqProducer rabbitMqProducer;
-    // region 增删改查
 
-    /**
-     * 提交代码
-     *
-     * @param questionSubmitAddRequest
-     * @return
-     */
     @PostMapping("/add")
     public BaseResponse<Long> addQuestionSubmit(@RequestBody QuestionSubmitAddRequest questionSubmitAddRequest) {
         if (questionSubmitAddRequest == null) {
@@ -57,7 +47,6 @@ public class QuestionSubmitController {
         }
         QuestionSubmit questionSubmit = new QuestionSubmit();
         BeanUtils.copyProperties(questionSubmitAddRequest, questionSubmit);
-        // 参数校验
         questionSubmitService.validQuestionSubmit(questionSubmit, true);
         Long loginUserId = UserContext.getUserId();
         if (loginUserId == null) {
@@ -74,26 +63,18 @@ public class QuestionSubmitController {
         return ResultUtils.success(newQuestionSubmitId);
     }
 
-    /**
-     * 删除（仅本人或管理员）
-     *
-     * @param deleteRequest
-     * @return
-     */
     @PostMapping("/delete")
     public BaseResponse<Boolean> deleteQuestionSubmit(@RequestBody DeleteRequest deleteRequest) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         long id = deleteRequest.getId();
-        // 判断是否存在
         QuestionSubmit oldQuestionSubmit = questionSubmitService.getById(id);
         ThrowUtils.throwIf(oldQuestionSubmit == null, ErrorCode.NOT_FOUND_ERROR);
         Long loginUserId = UserContext.getUserId();
         if (loginUserId == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-        // 仅本人或管理员可删除
         if (!oldQuestionSubmit.getUserId().equals(loginUserId)
                 && !UserConstant.ADMIN_ROLE.equals(UserContext.getUserRole())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
@@ -102,12 +83,6 @@ public class QuestionSubmitController {
         return ResultUtils.success(result);
     }
 
-    /**
-     * 更新（仅管理员，用于判题系统更新状态等）
-     *
-     * @param questionSubmitUpdateRequest
-     * @return
-     */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateQuestionSubmit(@RequestBody QuestionSubmitUpdateRequest questionSubmitUpdateRequest) {
@@ -120,22 +95,14 @@ public class QuestionSubmitController {
         if (judgeInfo != null) {
             questionSubmit.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
         }
-        // 参数校验
         questionSubmitService.validQuestionSubmit(questionSubmit, false);
         long id = questionSubmitUpdateRequest.getId();
-        // 判断是否存在
         QuestionSubmit oldQuestionSubmit = questionSubmitService.getById(id);
         ThrowUtils.throwIf(oldQuestionSubmit == null, ErrorCode.NOT_FOUND_ERROR);
         boolean result = questionSubmitService.updateById(questionSubmit);
         return ResultUtils.success(result);
     }
 
-    /**
-     * 根据 id 获取（仅本人或管理员，包含代码等原始信息）
-     *
-     * @param id
-     * @return
-     */
     @GetMapping("/get")
     public BaseResponse<QuestionSubmit> getQuestionSubmitById(long id) {
         if (id <= 0) {
@@ -147,7 +114,6 @@ public class QuestionSubmitController {
         }
         QuestionSubmit questionSubmit = questionSubmitService.getById(id);
         ThrowUtils.throwIf(questionSubmit == null, ErrorCode.NOT_FOUND_ERROR);
-        // 仅本人或管理员可查看原始信息
         if (!questionSubmit.getUserId().equals(loginUserId)
                 && !UserConstant.ADMIN_ROLE.equals(UserContext.getUserRole())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
@@ -155,12 +121,6 @@ public class QuestionSubmitController {
         return ResultUtils.success(questionSubmit);
     }
 
-    /**
-     * 根据 id 获取封装类（非本人或管理员时隐藏代码、判题信息）
-     *
-     * @param id
-     * @return
-     */
     @GetMapping("/get/vo")
     public BaseResponse<QuestionSubmitVO> getQuestionSubmitVOById(long id) {
         if (id <= 0) {
@@ -171,12 +131,6 @@ public class QuestionSubmitController {
         return ResultUtils.success(questionSubmitService.getQuestionSubmitVO(questionSubmit));
     }
 
-    /**
-     * 分页获取列表（仅管理员）
-     *
-     * @param questionSubmitQueryRequest
-     * @return
-     */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<QuestionSubmit>> listQuestionSubmitByPage(
@@ -188,30 +142,17 @@ public class QuestionSubmitController {
         return ResultUtils.success(questionSubmitPage);
     }
 
-    /**
-     * 分页获取列表（封装类，非本人或管理员时隐藏代码、判题信息）
-     *
-     * @param questionSubmitQueryRequest
-     * @return
-     */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<QuestionSubmitVO>> listQuestionSubmitVOByPage(
             @RequestBody QuestionSubmitQueryRequest questionSubmitQueryRequest) {
         long current = questionSubmitQueryRequest.getCurrent();
         long size = questionSubmitQueryRequest.getPageSize();
-        // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<QuestionSubmit> questionSubmitPage = questionSubmitService.page(new Page<>(current, size),
                 questionSubmitService.getQueryWrapper(questionSubmitQueryRequest));
         return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage));
     }
 
-    /**
-     * 分页获取当前用户提交列表（封装类）
-     *
-     * @param questionSubmitQueryRequest
-     * @return
-     */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<QuestionSubmitVO>> listMyQuestionSubmitVOByPage(
             @RequestBody QuestionSubmitQueryRequest questionSubmitQueryRequest) {
@@ -225,12 +166,10 @@ public class QuestionSubmitController {
         questionSubmitQueryRequest.setUserId(loginUserId);
         long current = questionSubmitQueryRequest.getCurrent();
         long size = questionSubmitQueryRequest.getPageSize();
-        // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<QuestionSubmit> questionSubmitPage = questionSubmitService.page(new Page<>(current, size),
                 questionSubmitService.getQueryWrapper(questionSubmitQueryRequest));
         return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage));
     }
 
-    // endregion
 }

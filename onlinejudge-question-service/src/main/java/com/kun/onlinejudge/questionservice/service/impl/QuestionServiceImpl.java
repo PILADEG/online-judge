@@ -33,9 +33,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-/**
- * 题目服务实现
- */
 @Service
 @Slf4j
 public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> implements QuestionService {
@@ -53,11 +50,9 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         String answer = question.getAnswer();
         String judgeConfig = question.getJudgeConfig();
         String judgeCases = question.getJudgeCases();
-        // 创建时，必填项不能为空
         if (add) {
             ThrowUtils.throwIf(StringUtils.isAnyBlank(title, content,judgeCases,judgeConfig), ErrorCode.PARAMS_ERROR, "标题或内容为空");
         }
-        // 有参数则校验
         if (StringUtils.isNotBlank(title) && title.length() > 100) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "标题过长");
         }
@@ -71,7 +66,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
             List<JudgeCase> judgeCaseList = JSONUtil.toList(judgeCases, JudgeCase.class);
             ThrowUtils.throwIf(CollUtil.isEmpty(judgeCaseList), ErrorCode.PARAMS_ERROR, "判题用例格式错误");
         }
-        // 判题配置校验
         if (StringUtils.isNotBlank(judgeConfig)) {
             JudgeConfig judgeConfigObj = JSONUtil.toBean(judgeConfig, JudgeConfig.class);
             ThrowUtils.throwIf(judgeConfigObj.getTimeLimit() == null || judgeConfigObj.getTimeLimit() <= 0,
@@ -96,7 +90,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         String content = questionQueryRequest.getContent();
         List<String> tagList = questionQueryRequest.getTags();
         Long userId = questionQueryRequest.getUserId();
-        // 拼接查询条件
         if (StringUtils.isNotBlank(searchText)) {
             queryWrapper.and(qw -> qw.like("title", searchText).or().like("content", searchText));
         }
@@ -138,11 +131,9 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         if (CollUtil.isEmpty(questionList)) {
             return questionVOPage;
         }
-        // 1. 收集作者 id，Feign 批量拉取用户信息
         Set<Long> userIdSet = questionList.stream().map(Question::getUserId).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, UserVO> userIdUserMap = getUserMap(userIdSet);
-        // 2. 填充信息
         List<QuestionVO> questionVOList = questionList.stream().map(question -> {
             QuestionVO questionVO = QuestionVO.objToVo(question);
             Long userId = question.getUserId();
@@ -153,12 +144,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         return questionVOPage;
     }
 
-    /**
-     * 按作者 id 集合经 Feign 批量拉取用户信息，返回 id -> UserVO 映射
-     *
-     * @param userIdSet
-     * @return
-     */
     private Map<Long, UserVO> getUserMap(Set<Long> userIdSet) {
         if (CollUtil.isEmpty(userIdSet)) {
             return Collections.emptyMap();

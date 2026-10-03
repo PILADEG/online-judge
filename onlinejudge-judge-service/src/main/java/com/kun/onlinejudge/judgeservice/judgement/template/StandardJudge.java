@@ -18,9 +18,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Resource;
 
-/**
- * Default Java
- */
 @Slf4j
 public abstract class StandardJudge implements JudgeTemplate{
     @Resource
@@ -30,8 +27,6 @@ public abstract class StandardJudge implements JudgeTemplate{
         try{
             if (judgeContext.getStatus() != null
                     && judgeContext.getStatus().equals(JudgeInfoMessageEnum.SYSTEM_ERROR.getValue())){
-                // 沙箱系统故障属"可重试故障"（如远程沙箱不可用）：此处不落终态，
-                // 抛给消费端把提交复位为 WAITING 并记录原因，由定时任务重投。
                 log.warn("sandbox system error, will retry: {}", judgeContext.getErrorMessage());
                 throw new RetryableJudgeException("沙箱系统故障：" + judgeContext.getErrorMessage());
             }

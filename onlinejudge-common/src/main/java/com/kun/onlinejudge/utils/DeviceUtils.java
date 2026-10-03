@@ -3,17 +3,11 @@ package com.kun.onlinejudge.utils;
 import org.apache.commons.lang3.StringUtils;
 
 public class DeviceUtils {
-    /**
-     * 设备类型枚举
-     */
     public static final String DEVICE_PC = "PC";
     public static final String DEVICE_MOBILE = "MOBILE";
     public static final String DEVICE_TABLET = "TABLET";
     public static final String DEVICE_OTHER = "OTHER";
 
-    /**
-     * 根据 User-Agent 判断设备类型
-     */
     public static String detectDeviceType(String userAgent) {
         if (StringUtils.isBlank(userAgent)) {
             return DEVICE_OTHER;

@@ -11,9 +11,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
-/**
- * 角色权限切面（语义与单体 AuthInterceptor 一致，但依赖身份头上下文而非 UserService）
- */
 @Aspect
 @Component
 @Slf4j

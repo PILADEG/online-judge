@@ -29,9 +29,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 题目接口
- */
 @RestController
 @RequestMapping("/question")
 @Slf4j
@@ -40,14 +37,6 @@ public class QuestionController {
     @Resource
     private QuestionService questionService;
 
-    // region 增删改查
-
-    /**
-     * 创建（仅管理员）
-     *
-     * @param questionAddRequest
-     * @return
-     */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addQuestion(@RequestBody QuestionAddRequest questionAddRequest) {
@@ -68,7 +57,6 @@ public class QuestionController {
         if (judgeConfig != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(judgeConfig));
         }
-        // 参数校验
         questionService.validQuestion(question, true);
         log.info("question:{}",question);
         Long loginUserId = UserContext.getUserId();
@@ -84,12 +72,6 @@ public class QuestionController {
         return ResultUtils.success(newQuestionId);
     }
 
-    /**
-     * 删除（仅管理员）
-     *
-     * @param deleteRequest
-     * @return
-     */
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteQuestion(@RequestBody DeleteRequest deleteRequest) {
@@ -102,12 +84,6 @@ public class QuestionController {
         return ResultUtils.success(result);
     }
 
-    /**
-     * 更新（仅管理员）
-     *
-     * @param questionUpdateRequest
-     * @return
-     */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateQuestion(@RequestBody QuestionUpdateRequest questionUpdateRequest) {
@@ -128,22 +104,14 @@ public class QuestionController {
         if (judgeConfig != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(judgeConfig));
         }
-        // 参数校验
         questionService.validQuestion(question, false);
         long id = questionUpdateRequest.getId();
-        // 判断是否存在
         Question oldQuestion = questionService.getById(id);
         ThrowUtils.throwIf(oldQuestion == null, ErrorCode.NOT_FOUND_ERROR);
         boolean result = questionService.updateById(question);
         return ResultUtils.success(result);
     }
 
-    /**
-     * 根据 id 获取（仅管理员，包含答案、判题用例等敏感信息）
-     *
-     * @param id
-     * @return
-     */
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Question> getQuestionById(long id) {
@@ -155,12 +123,6 @@ public class QuestionController {
         return ResultUtils.success(question);
     }
 
-    /**
-     * 根据 id 获取封装类
-     *
-     * @param id
-     * @return
-     */
     @GetMapping("/get/vo")
     public BaseResponse<QuestionVO> getQuestionVOById(long id) {
         if (id <= 0) {
@@ -171,12 +133,6 @@ public class QuestionController {
         return ResultUtils.success(questionService.getQuestionVO(question));
     }
 
-    /**
-     * 分页获取列表（仅管理员）
-     *
-     * @param questionQueryRequest
-     * @return
-     */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<Question>> listQuestionByPage(@RequestBody QuestionQueryRequest questionQueryRequest) {
@@ -187,22 +143,14 @@ public class QuestionController {
         return ResultUtils.success(questionPage);
     }
 
-    /**
-     * 分页获取列表（封装类）
-     *
-     * @param questionQueryRequest
-     * @return
-     */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<QuestionVO>> listQuestionVOByPage(@RequestBody QuestionQueryRequest questionQueryRequest) {
         long current = questionQueryRequest.getCurrent();
         long size = questionQueryRequest.getPageSize();
-        // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Question> questionPage = questionService.page(new Page<>(current, size),
                 questionService.getQueryWrapper(questionQueryRequest));
         return ResultUtils.success(questionService.getQuestionVOPage(questionPage));
     }
 
-    // endregion
 }

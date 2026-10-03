@@ -35,9 +35,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-/**
- * 题目提交服务实现
- */
 @Service
 @Slf4j
 public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper, QuestionSubmit>
@@ -58,16 +55,13 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         String code = questionSubmit.getCode();
         Long questionId = questionSubmit.getQuestionId();
         Integer status = questionSubmit.getStatus();
-        // 创建时，必填项不能为空
         if (add) {
             ThrowUtils.throwIf(StringUtils.isAnyBlank(language, code), ErrorCode.PARAMS_ERROR, "语言或代码为空");
             ThrowUtils.throwIf(questionId == null || questionId <= 0, ErrorCode.PARAMS_ERROR, "题目 id 不合法");
-            // 题目必须存在
             BaseResponse<QuestionVO> questionResp = questionServiceClient.getQuestionVOById(questionId);
             ThrowUtils.throwIf(questionResp == null || questionResp.getData() == null, ErrorCode.NOT_FOUND_ERROR,
                     "题目不存在");
         }
-        // 有参数则校验
         if (StringUtils.isNotBlank(code) && code.length() > 65535) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "代码过长");
         }
@@ -89,7 +83,6 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         Long userId = questionSubmitQueryRequest.getUserId();
         String sortField = questionSubmitQueryRequest.getSortField();
         String sortOrder = questionSubmitQueryRequest.getSortOrder();
-        // 拼接查询条件
         queryWrapper.eq(ObjectUtils.isNotEmpty(id), "id", id);
         queryWrapper.eq(StringUtils.isNotBlank(language), "language", language);
         queryWrapper.eq(ObjectUtils.isNotEmpty(status), "status", status);
@@ -112,7 +105,6 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
             }
         }
         questionSubmitVO.setUser(user);
-        // 非本人或管理员，隐藏代码和判题信息
         Long loginUserId = UserContext.getUserId();
         boolean isOwner = loginUserId != null && loginUserId.equals(userId);
         boolean isAdmin = UserConstant.ADMIN_ROLE.equals(UserContext.getUserRole());
@@ -131,11 +123,9 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (CollUtil.isEmpty(questionSubmitList)) {
             return questionSubmitVOPage;
         }
-        // 1. 关联查询用户信息（Feign 批量拉取）
         Set<Long> userIdSet = questionSubmitList.stream().map(QuestionSubmit::getUserId).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, UserVO> userIdUserMap = getUserMap(userIdSet);
-        // 2. 填充信息
         Long loginUserId = UserContext.getUserId();
         boolean isAdmin = UserConstant.ADMIN_ROLE.equals(UserContext.getUserRole());
         List<QuestionSubmitVO> questionSubmitVOList = questionSubmitList.stream().map(questionSubmit -> {
@@ -153,12 +143,6 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         return questionSubmitVOPage;
     }
 
-    /**
-     * 按提交人 id 集合经 Feign 批量拉取用户信息，返回 id -> UserVO 映射
-     *
-     * @param userIdSet
-     * @return
-     */
     private Map<Long, UserVO> getUserMap(Set<Long> userIdSet) {
         if (CollUtil.isEmpty(userIdSet)) {
             return Collections.emptyMap();

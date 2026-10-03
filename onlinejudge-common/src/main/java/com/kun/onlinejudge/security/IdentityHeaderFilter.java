@@ -9,11 +9,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * 服务侧身份头过滤器：信任网关注入的 X-User-* 头，映射为请求属性，
- * 供 UserContext/@AuthCheck 读取。网关未注入（无头）时即为匿名请求。
- * 仅应部署于内网可达的服务入口；生产环境由网关统一鉴权。
- */
 @Component
 public class IdentityHeaderFilter extends OncePerRequestFilter {
 

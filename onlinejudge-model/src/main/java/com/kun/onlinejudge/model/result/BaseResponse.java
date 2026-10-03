@@ -4,13 +4,6 @@ import java.io.Serializable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 通用返回类
- *
- * @param <T>
- *
- *
- */
 @Data
 @NoArgsConstructor
 public class BaseResponse<T> implements Serializable {

@@ -5,12 +5,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ObjectUtils;
 
-/**
- * 用户角色枚举
- *
- * 
- * 
- */
 public enum UserRoleEnum {
 
     USER("用户", "user"),
@@ -26,21 +20,10 @@ public enum UserRoleEnum {
         this.value = value;
     }
 
-    /**
-     * 获取值列表
-     *
-     * @return
-     */
     public static List<String> getValues() {
         return Arrays.stream(values()).map(item -> item.value).collect(Collectors.toList());
     }
 
-    /**
-     * 根据 value 获取枚举
-     *
-     * @param value
-     * @return
-     */
     public static UserRoleEnum getEnumByValue(String value) {
         if (ObjectUtils.isEmpty(value)) {
             return null;

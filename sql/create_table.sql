@@ -57,7 +57,9 @@ create table if not exists question_submit
     updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete   tinyint  default 0                 not null comment '是否删除',
     index idx_questionId (questionId),
-    index idx_userId (userId)
+    index idx_userId (userId),
+    -- 判题重试扫描用：JudgeRetryTask 按 status + updateTime 范围扫（避免全表扫与 filesort）
+    index idx_status_updateTime (status, updateTime)
 ) comment '题目提交表' collate = utf8mb4_unicode_ci;
 
 -- 死信消息存档表（判题消息被拒收时由 DlqMessageConsumer 落库，供人工排查；append-only，无逻辑删除）

@@ -2,9 +2,6 @@ package com.kun.onlinejudge.model.enums;
 
 import org.apache.commons.lang3.ObjectUtils;
 
-/**
- * 判题信息枚举
- */
 public enum JudgeInfoMessageEnum {
 
     ACCEPTED("Accepted", "成功"),
@@ -28,12 +25,6 @@ public enum JudgeInfoMessageEnum {
         this.text = text;
     }
 
-    /**
-     * 根据 value 获取枚举
-     *
-     * @param value
-     * @return
-     */
     public static JudgeInfoMessageEnum getEnumByValue(String value) {
         if (ObjectUtils.isEmpty(value)) {
             return null;

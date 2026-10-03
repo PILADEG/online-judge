@@ -19,19 +19,13 @@ public enum SupportLanguageEnum {
     public static List<SupportLanguageEnum> getAllEnums(){
         return Arrays.asList(SupportLanguageEnum.values());
     }
-    /**
-     * 根据 value 获取枚举
-     *
-     * @param value
-     * @return
-     */
     public static SupportLanguageEnum getEnumByValue(String value) {
         if (ObjectUtils.isEmpty(value)) {
             return null;
         }
         for (SupportLanguageEnum anEnum : SupportLanguageEnum.values()) {
             if (anEnum.getValue().equals(value)) {
-                return anEnum; // Changed from anEnum to anEnum.getValue()
+                return anEnum;
             }
         }
         return null;

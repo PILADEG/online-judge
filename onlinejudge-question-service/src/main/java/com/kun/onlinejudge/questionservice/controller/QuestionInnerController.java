@@ -13,9 +13,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 题目服务内网端点：仅供其它服务内网调用，不做用户鉴权；不得经网关对外路由。
- */
 @RestController
 @RequestMapping("/inner/question")
 public class QuestionInnerController {

@@ -14,16 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 
-/**
- * 判题结果回写。
- *
- * <p>三类写入路径：
- * <ul>
- *   <li>{@link #setJudgeResultToDatabase}：判题得出了结果（通过/未通过）→ status 由调用方设定；</li>
- *   <li>{@link #markRetryableFailure}：系统故障 → 把 RUNNING 复位为 WAITING 并记录原因，等定时任务重投；</li>
- *   <li>{@link #setAbortJudge} / {@link #tryAbortRetryExhausted}：不可重试或重试耗尽 → 落终态 RETRY_EXHAUSTED。</li>
- * </ul>
- */
 @Component
 @Slf4j
 public class JudgeUtils {
@@ -32,11 +22,6 @@ public class JudgeUtils {
     @Resource
     private QuestionSubmitMapper questionSubmitMapper;
 
-    /**
-     * 判题系统故障：把"判题中"复位为"待判题"并记录最后一次失败原因（写入 judgeInfo）。
-     * 重试次数由 JudgeRetryTask 在重新投递前 +1。仅当行仍为 RUNNING 时复位，
-     * 避免覆盖已经写好的终态结果（例如模板已落 FAILED 后才抛出的异常）。
-     */
     @Transactional(rollbackFor = Exception.class)
     public void markRetryableFailure(QuestionSubmit questionSubmit, String reason) {
         int updated = questionSubmitMapper.update(null, new UpdateWrapper<QuestionSubmit>()
@@ -51,11 +36,6 @@ public class JudgeUtils {
         }
     }
 
-    /**
-     * 判题中断终态：不可重试的系统故障（题目不存在、判题语言不支持等）。
-     * 调用时本线程持有该行（RUNNING），直接无条件落终态 RETRY_EXHAUSTED。
-     * question 可为 null（题目已不存在时不增加提交计数）。
-     */
     @Transactional(rollbackFor = Exception.class)
     public void setAbortJudge(Question question, QuestionSubmit questionSubmit, String reason) {
         increaseSubmitNum(question);
@@ -65,11 +45,6 @@ public class JudgeUtils {
         log.error("提交 {} 判题中断，置终态待人工处理；原因：{}", questionSubmit.getId(), reason);
     }
 
-    /**
-     * 重试次数耗尽 → 条件式落终态（仅当行仍为 WAITING，避免与重投后被消费的请求竞争）。
-     *
-     * @return 是否成功置为终态（false 表示行已被其它路径处理）
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean tryAbortRetryExhausted(Question question, Long questionSubmitId, String reason) {
         int updated = questionSubmitMapper.update(null, new UpdateWrapper<QuestionSubmit>()
@@ -85,10 +60,6 @@ public class JudgeUtils {
         return true;
     }
 
-    /**
-     * 判题得出结果（通过/未通过）时回写：提交计数 +1（通过则另加通过数），并更新提交行。
-     * status / judgeInfo 由调用方（判题模板）先行设置。
-     */
     @Transactional(rollbackFor = Exception.class)
     public void setJudgeResultToDatabase(Long questionId,
                                          QuestionSubmit questionSubmit,

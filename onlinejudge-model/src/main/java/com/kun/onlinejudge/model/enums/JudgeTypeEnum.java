@@ -16,12 +16,6 @@ public enum JudgeTypeEnum {
         this.text = text;
     }
 
-    /**
-     * 根据 value 获取枚举
-     *
-     * @param value
-     * @return
-     */
     public static JudgeTypeEnum getEnumByValue(Integer value) {
         if (ObjectUtils.isEmpty(value)) {
             return null;

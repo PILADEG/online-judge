@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 用户服务内部端点：仅供网关/其它服务内网调用，不做用户鉴权；不得经网关对外路由。
- */
 @RestController
 @RequestMapping("/inner/user")
 public class UserInnerController {
@@ -27,7 +24,6 @@ public class UserInnerController {
     @Resource
     private UserService userService;
 
-    /** 网关每请求取最新认证快照 */
     @GetMapping("/{id}/snapshot")
     public BaseResponse<UserSnapshotVO> snapshot(@PathVariable("id") Long id) {
         User user = userService.getById(id);
